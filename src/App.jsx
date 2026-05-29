@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
 import ProjectList from './components/ProjectList';
 import ProjectDetail from './components/ProjectDetail';
+import InvoiceUpload from './components/InvoiceUpload';
 import { fetchProjectsFromSheet } from './utils/helpers';
 
 export default function App() {
@@ -9,6 +10,7 @@ export default function App() {
   const [userInfo, setUserInfo]       = useState(null);
   const [projects, setProjects]       = useState([]);
   const [selected, setSelected]       = useState(null);
+  const [scanning, setScanning]       = useState(false);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
 
@@ -84,12 +86,37 @@ export default function App() {
             project={selected}
             role={role}
             onBack={() => setSelected(null)}
-            onScan={() => alert('納品書取込（未実装）')}
+            onScan={() => setScanning(true)}
           />
         ) : (
           <ProjectList
             projects={projects}
             onSelect={setSelected}
+          />
+        )}
+
+        {scanning && selected && (
+          <InvoiceUpload
+            project={selected}
+            onClose={() => setScanning(false)}
+            onImport={newItems => {
+              setProjects(prev => prev.map(p =>
+                p.id === selected.id
+                  ? { ...p, items: [...p.items, ...newItems.map((item, i) => ({
+                      ...item,
+                      id: `ocr-${Date.now()}-${i}`,
+                    }))] }
+                  : p
+              ));
+              setSelected(prev => ({
+                ...prev,
+                items: [...prev.items, ...newItems.map((item, i) => ({
+                  ...item,
+                  id: `ocr-${Date.now()}-${i}`,
+                }))],
+              }));
+              setScanning(false);
+            }}
           />
         )}
       </main>
