@@ -38,7 +38,9 @@ export default helpers;
  * @returns {Promise<Array>}       案件オブジェクトの配列
  */
 export async function fetchProjectsFromSheet(_spreadsheetId, _range) {
-  throw new Error('fetchProjectsFromSheet: 未実装 — Google Sheets API 連携を実装してください');
+  // TODO: Google Sheets API 実装後は以下を置き換える
+  const { sampleProjects } = await import('../data/sampleData.js');
+  return structuredClone(sampleProjects);
 }
 
 /**
