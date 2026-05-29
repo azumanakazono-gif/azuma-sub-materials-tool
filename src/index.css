@@ -34,6 +34,27 @@ body {
 .header-spacer { flex: 1; }
 .header-user { font-size: 13px; color: #cde; }
 
+.auth-info { display: flex; align-items: center; gap: 10px; }
+.btn-google-login {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fff; color: #1e3a5f; border: none; border-radius: 6px;
+  padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-google-login:hover { background: #e8f0fe; }
+.btn-logout {
+  background: transparent; border: 1px solid rgba(255,255,255,0.4);
+  color: #cde; border-radius: 6px; padding: 4px 10px;
+  font-size: 12px; cursor: pointer;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.1); }
+.error-banner {
+  background: #fee2e2; color: #991b1b; font-size: 13px;
+  padding: 10px 20px; border-bottom: 1px solid #fca5a5;
+}
+.loading {
+  text-align: center; padding: 60px; color: #64748b; font-size: 15px;
+}
+
 .app-main { flex: 1; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; }
 
 /* ── Pages ── */
