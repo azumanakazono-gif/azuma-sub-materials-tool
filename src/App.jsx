@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useGoogleLogin, googleLogout } from '@react-oauth/google';
+import { googleLogout } from '@react-oauth/google';
 import ProjectList from './components/ProjectList';
 import ProjectDetail from './components/ProjectDetail';
 import InvoiceUpload from './components/InvoiceUpload';
+import GoogleLoginButton from './components/GoogleLoginButton';
 import { fetchProjectsFromSheet } from './utils/helpers';
 
-export default function App() {
+// oauthEnabled: main.jsx が GoogleOAuthProvider でラップした場合のみ true
+export default function App({ oauthEnabled = false }) {
   const [accessToken, setAccessToken] = useState(null);
   const [userInfo, setUserInfo]       = useState(null);
   const [projects, setProjects]       = useState([]);
@@ -29,31 +31,39 @@ export default function App() {
     }
   }, []);
 
-  // 初回（未ログイン時）はモックデータで表示
   useEffect(() => { loadProjects(null); }, [loadProjects]);
 
-  const login = useGoogleLogin({
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    onSuccess: async (tokenResponse) => {
-      const token = tokenResponse.access_token;
-      setAccessToken(token);
-      // ユーザー情報を取得
+  const handleLoginSuccess = useCallback(async (tokenResponse) => {
+    const token = tokenResponse.access_token;
+    setAccessToken(token);
+    try {
       const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const info = await res.json();
-      setUserInfo(info);
-      await loadProjects(token);
-    },
-    onError: (err) => setError(`Googleログインに失敗しました: ${err.error ?? '不明なエラー'}`),
-  });
+      setUserInfo(await res.json());
+    } catch { /* ユーザー情報取得失敗は無視 */ }
+    await loadProjects(token);
+  }, [loadProjects]);
 
-  const logout = () => {
+  const handleLoginError = useCallback((err) => {
+    setError(`Googleログインに失敗しました: ${err.error ?? '不明なエラー'}`);
+  }, []);
+
+  const logout = useCallback(() => {
     googleLogout();
     setAccessToken(null);
     setUserInfo(null);
     loadProjects(null);
-  };
+  }, [loadProjects]);
+
+  const handleImport = useCallback((newItems) => {
+    const stamp = () => newItems.map((item, i) => ({ ...item, id: `ocr-${Date.now()}-${i}` }));
+    setProjects(prev => prev.map(p =>
+      p.id === selected.id ? { ...p, items: [...p.items, ...stamp()] } : p
+    ));
+    setSelected(prev => ({ ...prev, items: [...prev.items, ...stamp()] }));
+    setScanning(false);
+  }, [selected]);
 
   return (
     <div className="app-root">
@@ -62,21 +72,28 @@ export default function App() {
         <span className="app-title">副資材発注リスト管理ツール</span>
         <span className="app-corp">アズマ電気工事部</span>
         <div className="header-spacer" />
-        {accessToken ? (
-          <div className="auth-info">
-            <span className="header-user">{userInfo?.name ?? 'ログイン中'}</span>
-            <button className="btn-logout" onClick={logout}>ログアウト</button>
-          </div>
+
+        {/* ── 認証状態によってヘッダー右端を切り替え ── */}
+        {oauthEnabled ? (
+          accessToken ? (
+            <div className="auth-info">
+              <span className="header-user">{userInfo?.name ?? 'ログイン中'}</span>
+              <button className="btn-logout" onClick={logout}>ログアウト</button>
+            </div>
+          ) : (
+            // GoogleLoginButton は GoogleOAuthProvider 内でのみ使用可能
+            <GoogleLoginButton
+              onSuccess={handleLoginSuccess}
+              onError={handleLoginError}
+            />
+          )
         ) : (
-          <button className="btn-google-login" onClick={() => login()}>
-            Googleでログイン
-          </button>
+          // OAuth 未設定 → デモモード表示（クラッシュしない）
+          <span className="demo-chip">📋 デモモード（サンプルデータ）</span>
         )}
       </header>
 
-      {error && (
-        <div className="error-banner">⚠ {error}</div>
-      )}
+      {error && <div className="error-banner">⚠ {error}</div>}
 
       <main className="app-main">
         {loading ? (
@@ -89,34 +106,14 @@ export default function App() {
             onScan={() => setScanning(true)}
           />
         ) : (
-          <ProjectList
-            projects={projects}
-            onSelect={setSelected}
-          />
+          <ProjectList projects={projects} onSelect={setSelected} />
         )}
 
         {scanning && selected && (
           <InvoiceUpload
             project={selected}
             onClose={() => setScanning(false)}
-            onImport={newItems => {
-              setProjects(prev => prev.map(p =>
-                p.id === selected.id
-                  ? { ...p, items: [...p.items, ...newItems.map((item, i) => ({
-                      ...item,
-                      id: `ocr-${Date.now()}-${i}`,
-                    }))] }
-                  : p
-              ));
-              setSelected(prev => ({
-                ...prev,
-                items: [...prev.items, ...newItems.map((item, i) => ({
-                  ...item,
-                  id: `ocr-${Date.now()}-${i}`,
-                }))],
-              }));
-              setScanning(false);
-            }}
+            onImport={handleImport}
           />
         )}
       </main>
