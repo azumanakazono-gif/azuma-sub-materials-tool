@@ -119,51 +119,106 @@ npm run build
 # dist/ ディレクトリに静的ファイルが生成されます
 ```
 
-### デプロイ先の例
+### デプロイ先の比較
 
-#### GitHub Pages（無料・非公開リポジトリは有料プランが必要）
+| | Vercel | Firebase Hosting | GitHub Pages |
+|---|---|---|---|
+| 無料枠 | ✅ 十分 | ✅ 十分 | ✅（公開リポジトリのみ） |
+| 設定の手軽さ | ◎ CLI 1コマンド | ○ CLI 数ステップ | △ ブランチ設定が必要 |
+| SPA ルーティング | ✅ `vercel.json` 設定済み | ✅ `firebase.json` 設定済み | ⚠ 追加対応が必要 |
+| カスタムドメイン | ✅ | ✅ | ✅ |
+| 推奨度 | **◎ 最も簡単** | ○ Google 系で統一したい場合 | △ |
+
+---
+
+### A. Vercel（推奨・最も簡単）
+
+`vercel.json` は設定済みです。以下のコマンドだけで完了します。
 
 ```bash
-# vite.config.js の base を設定
-# base: '/azuma-sub-materials-tool/'
+# 1. Vercel CLI をインストール
+npm install -g vercel
 
-npm run build
-# dist/ を gh-pages ブランチにプッシュ
+# 2. ログイン（ブラウザが開く）
+vercel login
+
+# 3. デプロイ（初回は対話形式）
+vercel
+#  → Framework Preset: Vite
+#  → Build Command:    npm run build   （そのままEnter）
+#  → Output Directory: dist            （そのままEnter）
+
+# 4. 本番デプロイ
+vercel --prod
 ```
 
-#### Firebase Hosting（推奨）
+初回デプロイ後に表示される URL（例: `https://azuma-sub-materials-tool.vercel.app`）を  
+Google Cloud Console の OAuth2 クライアントIDの「承認済みの JavaScript 生成元」に追加してください。
+
+以降は `git push` するだけで自動デプロイされます（GitHub 連携時）。
+
+---
+
+### B. Firebase Hosting
+
+`firebase.json` / `.firebaserc` は設定済みです。`.firebaserc` の `your-firebase-project-id` を実際のプロジェクトIDに書き換えてください。
 
 ```bash
+# 1. Firebase CLI をインストール
 npm install -g firebase-tools
+
+# 2. ログイン
 firebase login
-firebase init hosting   # dist を公開ディレクトリに設定
+
+# 3. .firebaserc のプロジェクトIDを書き換える
+#    Firebase Console > プロジェクト設定 > プロジェクトID を確認
+#    例: "default": "azuma-tool-12345"
+
+# 4. ビルド & デプロイ
 npm run build
 firebase deploy
 ```
 
-`.firebaserc` 設定例:
-```json
-{
-  "hosting": {
-    "public": "dist",
-    "ignore": ["firebase.json", "**/.*"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
-  }
-}
-```
+デプロイ後に表示される URL（例: `https://azuma-tool-12345.web.app`）を  
+Google Cloud Console の OAuth2 クライアントIDの「承認済みの JavaScript 生成元」に追加してください。
 
-#### Vercel（最も簡単）
+---
+
+### C. GitHub Pages（サブパスデプロイ）
 
 ```bash
-npm install -g vercel
-vercel
-# フレームワーク: Vite を選択
-# Output Directory: dist
+# 1. .env に以下を追加（リポジトリ名に合わせて変更）
+#    VITE_BASE_PATH=/azuma-sub-materials-tool/
+
+# 2. gh-pages パッケージをインストール
+npm install -D gh-pages
+
+# 3. package.json の scripts に追加
+#    "deploy": "npm run build && gh-pages -d dist"
+
+# 4. デプロイ
+npm run deploy
 ```
 
-> **デプロイ後の必須作業:**  
-> Google Cloud Console の OAuth2 クライアントIDの「承認済みの JavaScript 生成元」に  
-> 本番 URL（例: `https://your-app.vercel.app`）を追加してください。
+GitHub リポジトリの Settings → Pages → Source を `gh-pages` ブランチに設定してください。
+
+---
+
+### デプロイ後の共通作業（必須）
+
+デプロイ先の URL が決まったら、以下を実施してください。
+
+1. [Google Cloud Console](https://console.cloud.google.com/) を開く
+2. **「APIとサービス」→「認証情報」** → 作成済みの OAuth2 クライアントIDを選択
+3. **「承認済みの JavaScript 生成元」** に本番 URL を追加
+
+```
+# 追加例
+https://azuma-sub-materials-tool.vercel.app
+https://azuma-tool-12345.web.app
+```
+
+4. 保存（反映まで数分かかる場合があります）
 
 ---
 
