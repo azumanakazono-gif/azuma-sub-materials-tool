@@ -1,11 +1,14 @@
-const STATUS_MAP = {
-  active:    { label: '施工中', cls: 'badge-active' },
-  completed: { label: '完了',   cls: 'badge-completed' },
-  planning:  { label: '計画中', cls: 'badge-planning' },
-  on_hold:   { label: '保留',   cls: 'badge-hold' },
+const STATUS_STYLES = {
+  '完了':   'bg-slate-100 text-slate-600',
+  '進行中': 'bg-blue-100 text-blue-700',
+  '未着手': 'bg-amber-100 text-amber-700',
 };
 
 export default function StatusBadge({ s }) {
-  const { label, cls } = STATUS_MAP[s] || { label: s, cls: '' };
-  return <span className={`status-badge ${cls}`}>{label}</span>;
+  const cls = STATUS_STYLES[s] || 'bg-slate-100 text-slate-500';
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${cls}`}>
+      {s}
+    </span>
+  );
 }
