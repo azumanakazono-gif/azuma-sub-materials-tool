@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { googleLogout } from '@react-oauth/google';
+import { INITIAL_PROJECTS } from './data/sampleData';
 import Sidebar from './components/Sidebar';
 import KpiCards from './components/KpiCards';
 import ProjectList from './components/ProjectList';
@@ -11,7 +12,7 @@ import { fetchProjectsFromSheet } from './utils/helpers';
 export default function App({ oauthEnabled = false }) {
   const [accessToken, setAccessToken] = useState(null);
   const [userInfo, setUserInfo]       = useState(null);
-  const [projects, setProjects]       = useState([]);
+  const [projects, setProjects]       = useState(INITIAL_PROJECTS);
   const [selected, setSelected]       = useState(null);
   const [scanning, setScanning]       = useState(false);
   const [loading, setLoading]         = useState(false);
@@ -21,6 +22,7 @@ export default function App({ oauthEnabled = false }) {
   const role = { canScan: !!accessToken };
 
   const loadProjects = useCallback(async (token) => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
@@ -32,8 +34,6 @@ export default function App({ oauthEnabled = false }) {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => { loadProjects(null); }, [loadProjects]);
 
   const handleLoginSuccess = useCallback(async (tokenResponse) => {
     const token = tokenResponse.access_token;
@@ -55,8 +55,8 @@ export default function App({ oauthEnabled = false }) {
     googleLogout();
     setAccessToken(null);
     setUserInfo(null);
-    loadProjects(null);
-  }, [loadProjects]);
+    setProjects(INITIAL_PROJECTS);
+  }, []);
 
   const handleImport = useCallback((newItems) => {
     const stamp = () => newItems.map((item, i) => ({ ...item, id: `ocr-${Date.now()}-${i}` }));
@@ -69,12 +69,9 @@ export default function App({ oauthEnabled = false }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      {/* Sidebar */}
       <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
 
-      {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
         <header className="flex items-center justify-between px-6 h-14 bg-white border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-base font-bold text-slate-800">電気工事部 発注リスト管理ツール</h1>
@@ -94,10 +91,7 @@ export default function App({ oauthEnabled = false }) {
                   </button>
                 </div>
               ) : (
-                <GoogleLoginButton
-                  onSuccess={handleLoginSuccess}
-                  onError={handleLoginError}
-                />
+                <GoogleLoginButton onSuccess={handleLoginSuccess} onError={handleLoginError} />
               )
             ) : (
               <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">デモモード</span>
@@ -116,7 +110,6 @@ export default function App({ oauthEnabled = false }) {
           </div>
         </header>
 
-        {/* Notification Banner */}
         <div className="flex items-center gap-2 px-6 py-2.5 bg-teal-50 border-b border-teal-100">
           <span className="material-symbols-outlined text-[16px] text-teal-600">info</span>
           <span className="text-xs text-teal-700">
@@ -124,7 +117,6 @@ export default function App({ oauthEnabled = false }) {
           </span>
         </div>
 
-        {/* Error Banner */}
         {error && (
           <div className="flex items-center gap-2 px-6 py-2.5 bg-red-50 border-b border-red-100">
             <span className="material-symbols-outlined text-[16px] text-red-500">error</span>
@@ -132,7 +124,6 @@ export default function App({ oauthEnabled = false }) {
           </div>
         )}
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center h-64 text-slate-400">読み込み中...</div>

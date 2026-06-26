@@ -1,3 +1,4 @@
+import { INITIAL_PROJECTS } from '../data/sampleData.js';
 import {
   batchGetSheetValues,
   getSheetValues,
@@ -59,8 +60,7 @@ const PLAN_ACTUAL_COST_COL = 'K';
 
 export async function fetchProjectsFromSheet(accessToken) {
   if (!accessToken || !SPREADSHEET_ID) {
-    const { sampleProjects } = await import('../data/sampleData.js');
-    return structuredClone(sampleProjects);
+    return structuredClone(INITIAL_PROJECTS);
   }
 
   const [projectRows, itemRows] = await batchGetSheetValues(
