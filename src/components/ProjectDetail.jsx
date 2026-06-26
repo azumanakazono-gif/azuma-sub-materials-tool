@@ -5,7 +5,6 @@ import Pct from './Pct';
 import Donut from './Donut';
 import StatusBadge from './StatusBadge';
 import CatTag from './CatTag';
-import H from '../utils/helpers';
 
 function orderRows(items, group) {
   const withN = items.map((x, i) => ({ ...x, n: i + 1 }));
@@ -28,18 +27,22 @@ function orderRows(items, group) {
 export default function ProjectDetail({ project, role, onBack, onScan, recentIds }) {
   const [group, setGroup] = useState('date');
   const p = project;
-  const act = H.actualCost(p);
-  const inclTotal = H.actualInclTotal(p);
-  const variance = H.costVariance(p);
+  const items = p.items || [];
+
+  const itemsCost = items.reduce((s, x) => s + x.qty * x.unit, 0);
+  const act = itemsCost || p.cost || 0;
+  const inclTotal = items.reduce((s, x) => s + x.qty * x.unit * 1.1, 0);
+  const variance = p.revenue - act;
   const over = variance < 0;
-  const prof = H.profit(p);
-  const mgn = H.margin(p);
+  const prof = p.revenue - act;
+  const mgn = p.revenue ? prof / p.revenue : 0;
+  const estMgn = p.profitRateEst / 100;
 
   const byVendor = useMemo(() => {
     const m = {};
-    p.items.forEach(x => { m[x.vendor] = (m[x.vendor] || 0) + x.qty * x.unit; });
+    items.forEach(x => { m[x.vendor] = (m[x.vendor] || 0) + x.qty * x.unit; });
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
-  }, [p]);
+  }, [items]);
 
   const recent = new Set(recentIds || []);
 
@@ -58,9 +61,7 @@ export default function ProjectDetail({ project, role, onBack, onScan, recentIds
                 <StatusBadge s={p.status} />
                 <CatTag c={p.category} />
                 <span className="dm">施主 <b>{p.client}</b></span>
-                <span className="dm">営業 <b>{p.owner}</b></span>
-                <span className="dm">着工 <b className="mono">{p.startDate || '—'}</b></span>
-                <span className="dm">完工 <b className="mono">{p.kouki || '—'}</b></span>
+                <span className="dm">営業 <b>{p.sales}</b></span>
               </div>
             </div>
           </div>
@@ -75,16 +76,16 @@ export default function ProjectDetail({ project, role, onBack, onScan, recentIds
         <div className="pl-grid">
           <div className="pl-cell">
             <span className="pl-lab">電工部 売上（税抜）</span>
-            <Money v={p.deptSales} mark className="big" />
+            <Money v={p.revenue} mark className="big" />
           </div>
           <div className="pl-cell">
-            <span className="pl-lab">想定原価</span>
-            <Money v={p.estCost} mark dim className="big" />
+            <span className="pl-lab">想定利益率</span>
+            <span className="big pct">{p.profitRateEst.toFixed(1)}%</span>
           </div>
           <div className="pl-cell hl">
             <span className="pl-lab">実行原価 ＝ 発注リスト小計</span>
             <Money v={act} mark className="big" />
-            <span className="pl-note">税込 {Math.round(inclTotal).toLocaleString()} 円</span>
+            {inclTotal > 0 && <span className="pl-note">税込 {Math.round(inclTotal).toLocaleString()} 円</span>}
           </div>
           <div className="pl-cell">
             <span className="pl-lab">予算差異</span>
@@ -100,7 +101,7 @@ export default function ProjectDetail({ project, role, onBack, onScan, recentIds
             <div className="donutinfo">
               <span className="pl-lab">利益率（実績）</span>
               <Pct v={mgn} className="big" />
-              <span className="pl-note">想定 {(H.estMargin(p) * 100).toFixed(1)}%</span>
+              <span className="pl-note">想定 {(estMgn * 100).toFixed(1)}%</span>
             </div>
           </div>
         </div>
@@ -115,7 +116,7 @@ export default function ProjectDetail({ project, role, onBack, onScan, recentIds
       </div>
 
       <div className="listhead">
-        <div className="listhead-l"><Icon name="list" size={16} />発注リスト明細<span className="rowcount">{p.items.length}行</span></div>
+        <div className="listhead-l"><Icon name="list" size={16} />発注リスト明細<span className="rowcount">{items.length}行</span></div>
         <div className="seg sm">
           <button className={'seg-btn' + (group === 'date' ? ' on' : '')} onClick={() => setGroup('date')}>日付順</button>
           <button className={'seg-btn' + (group === 'vendor' ? ' on' : '')} onClick={() => setGroup('vendor')}>取引先別</button>
@@ -137,39 +138,49 @@ export default function ProjectDetail({ project, role, onBack, onScan, recentIds
             </tr>
           </thead>
           <tbody>
-            {orderRows(p.items, group).map((r, i) =>
-              r.group ? (
-                <tr key={'g' + i} className="grouprow"><td></td><td colSpan={7} className="tl">{r.group}</td></tr>
-              ) : (
-                <tr key={r.id} className={recent.has(r.id) ? 'newrow' : ''}>
-                  <td className="mono dim tc">{r.n}</td>
-                  <td className="mono">{r.date}</td>
-                  <td>{r.vendor}</td>
-                  <td className="tl item">{r.name}{recent.has(r.id) && <span className="newtag">NEW</span>}</td>
-                  <td className="tr mono">{r.qty}</td>
-                  <td className="tr"><Money v={r.unit} /></td>
-                  <td className="tr"><Money v={r.qty * r.unit * 1.1} /></td>
-                  <td className="owner">{r.owner || '—'}</td>
-                </tr>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="tc dim" style={{ padding: '32px 12px' }}>
+                  発注明細がありません。納品書を取込むと明細が追加されます。
+                </td>
+              </tr>
+            ) : (
+              orderRows(items, group).map((r, i) =>
+                r.group ? (
+                  <tr key={'g' + i} className="grouprow"><td></td><td colSpan={7} className="tl">{r.group}</td></tr>
+                ) : (
+                  <tr key={r.id} className={recent.has(r.id) ? 'newrow' : ''}>
+                    <td className="mono dim tc">{r.n}</td>
+                    <td className="mono">{r.date}</td>
+                    <td>{r.vendor}</td>
+                    <td className="tl item">{r.name}{recent.has(r.id) && <span className="newtag">NEW</span>}</td>
+                    <td className="tr mono">{r.qty}</td>
+                    <td className="tr"><Money v={r.unit} /></td>
+                    <td className="tr"><Money v={r.qty * r.unit * 1.1} /></td>
+                    <td className="owner">{r.owner || '—'}</td>
+                  </tr>
+                )
               )
             )}
           </tbody>
-          <tfoot>
-            <tr className="subtotal">
-              <td colSpan={4} className="tr">小計</td>
-              <td></td>
-              <td className="tr lab">税抜</td>
-              <td className="tr"><Money v={act} mark /></td>
-              <td></td>
-            </tr>
-            <tr className="subtotal">
-              <td colSpan={4} className="tr"></td>
-              <td></td>
-              <td className="tr lab">税込</td>
-              <td className="tr"><Money v={inclTotal} mark /></td>
-              <td></td>
-            </tr>
-          </tfoot>
+          {items.length > 0 && (
+            <tfoot>
+              <tr className="subtotal">
+                <td colSpan={4} className="tr">小計</td>
+                <td></td>
+                <td className="tr lab">税抜</td>
+                <td className="tr"><Money v={itemsCost} mark /></td>
+                <td></td>
+              </tr>
+              <tr className="subtotal">
+                <td colSpan={4} className="tr"></td>
+                <td></td>
+                <td className="tr lab">税込</td>
+                <td className="tr"><Money v={inclTotal} mark /></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       <div className="tablefoot">
