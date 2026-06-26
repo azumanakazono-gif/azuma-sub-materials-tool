@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 const fmt = (v) => v != null ? '¥' + Math.abs(v).toLocaleString('ja-JP') : '—';
 
 const STATUS_TABS = ['すべて', '進行中', '完了', '未着手'];
-const CATEGORIES = ['すべてのカテゴリ', '新築（木造）', '増改築・リフォーム', '店舗・テナント'];
+const CATEGORIES = ['すべてのカテゴリ', '住宅用PV', 'リパワリング', '戸建てPCS交換', 'リプレイス', '事業者用PV', 'EV充放電システム', 'その他'];
 
 function SortIcon({ col, sortCol, sortDir }) {
   if (col !== sortCol) return <span className="material-symbols-outlined text-[14px] text-slate-300 ml-1">unfold_more</span>;
